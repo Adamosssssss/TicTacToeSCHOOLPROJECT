@@ -8,7 +8,7 @@ import json
 class TicTacToeServer:
     def __init__(self):
         self.server = None
-        self.host_IP = '127.0.0.1'
+        self.host_IP = 'localhost'
         self.port = 5000
         self.client_name = " "
         self.clients = []
@@ -76,8 +76,9 @@ class TicTacToeServer:
         client_msg = " "
         client_connection.send(str(self.PUBLIC_KEY).encode())
         # send welcome message to client
-        #self.client_name = RSA.decrypt(self.PRIVATE_KEY, json.loads(client_connection.recv(1024).decode()))
-        self.client_name = client_connection.recv(1024).decode()
+
+        #Encrypted
+        self.client_name = RSA.decrypt(self.PRIVATE_KEY, json.loads(client_connection.recv(1024).decode()))
         print(self.client_name)
 
         if len(self.clients) < 2:
@@ -109,9 +110,12 @@ class TicTacToeServer:
 
         while True:
             # get the player choice from received data
+            #NonEncrypted
             data = client_connection.recv(1024).decode()
+
+            #Encrypted
             #data = RSA.decrypt(self.PRIVATE_KEY, json.loads(client_connection.recv(1024).decode()))
-            #print(data)
+            print(data)
             if not data:
                 break
 
@@ -119,16 +123,20 @@ class TicTacToeServer:
             if data.startswith("$xy$"):
                 # is the message from client1 or client2?
                 if client_connection == self.clients[0]:
+                    #Encrypted
                     # send the data from this player (client) to the other player (client)
                     #enc_data = RSA.encrypt(self.public_keys[1], data)
                     #self.clients[1].send(json.dumps(enc_data).encode('utf-8'))
-
+                    
+                    #NonEncrypted
                     self.clients[1].send(data.encode())
                 else:
+                    #Encrypted
                     # send the data from this player (client) to the other player (client)
                     #enc_data = RSA.encrypt(self.public_keys[0], data)
                     #self.clients[0].send(json.dumps(enc_data).encode('utf-8'))
 
+                    #NonEncrypted
                     self.clients[0].send(data.encode())
 
 
