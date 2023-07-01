@@ -5,7 +5,9 @@ from tkinter import messagebox
 from time import sleep
 import threading
 from gameRules import gameRules
-from RSA import RSA
+import RSA
+import json
+
 
 class TicTacToeClient():
     def __init__(self):
@@ -20,12 +22,14 @@ class TicTacToeClient():
         self.btn_connect = tk.Button(self.top_welcome_frame, text="Connect", command=lambda : self.connect())
         self.btn_connect.pack(side=tk.LEFT)
         self.top_welcome_frame.pack(side=tk.TOP)
-
         self.top_frame = tk.Frame(self.window_main)
 
-        #RSA
-        
-        
+        #RSA 
+        self.primes = RSA.get_primes(15, 300)
+        self.public_key, self.private_key = RSA.keys(self.primes[0], self.primes[1])
+        self.server_public_key = None
+        print(self.public_key)
+
         # network client
         self.client = None
         self.host_IP = '127.0.0.1'
@@ -92,6 +96,7 @@ class TicTacToeClient():
             self.you_started = True
             self.your_turn = True
             self.lbl_status["text"] = "STATUS: Your turn!"
+        
 
 
     def get_cordinate(self, xy):
@@ -110,8 +115,15 @@ class TicTacToeClient():
                 print(str(xy[0]), str(xy[1]))
                 message = "$xy$" + str(xy[0]) + "$" + str(xy[1])
                 print(message)
+
+                #Encrypted
+                #enc_message = RSA.encrypt(self.server_public_key, message)
+                #print(enc_message)
+                #self.client.send(json.dumps(enc_message).encode('utf-8'))
+
+                #NonEncrypted
                 self.client.send(message.encode())
-                # self.client.send(("$xy$" + str(xy[0]) + "$" + str(xy[1])).encode())
+                
                 self.your_turn = False
 
                 # Does this play leads to a win or a draw
@@ -166,9 +178,19 @@ class TicTacToeClient():
         try:
             self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.client.connect((self.host_IP, self.port))
-            self.client.send(name.encode())  # Send name to server after connecting
+            #Encrypted
+            #enc_name = RSA.encrypt(self.server_public_key, self.ent_name.get())
+            #self.client.send(json.dumps(enc_name).encode('utf-8'))  # Send name to server after connecting
+
+            #NonEncrypted
+            self.client.send(name.encode())
+
             # start a thread to keep receiving message from server
-            # do not block the main thread :)
+
+            server_publick_key_str = self.client.recv(1024).decode()
+            self.server_public_key = eval(server_publick_key_str)
+            print(self.server_public_key)
+
             threading._start_new_thread(self.receive_message_from_server, (self.client, "m"))
             self.top_welcome_frame.pack_forget()
             self.top_frame.pack(side=tk.TOP)
@@ -177,11 +199,11 @@ class TicTacToeClient():
                 print('this exception',e)
                 tk.messagebox.showerror(title="ERROR!!!", message="Cannot connect to host: " + self.host_IP + " on port: " + str(
                     self.port) + " Server may be Unavailable. Try again later")
-
-
+    
     def receive_message_from_server(self, sck, m):
         while True:
             from_server = sck.recv(4096).decode()
+            self.client.send(str(self.public_key).encode())
 
             if not from_server: break
 
@@ -220,6 +242,7 @@ class TicTacToeClient():
                     self.lbl_status["text"] = "STATUS: " + self.opponent_details["name"] + "'s turn!"
                     self.you_started = False
                     self.your_turn = False
+
             elif from_server.startswith("$xy$"):
                 temp = from_server.replace("$xy$", "")
                 _x = temp[0:temp.find("$")]
@@ -251,7 +274,6 @@ class TicTacToeClient():
                     self.your_turn = True
                     self.lbl_status["text"] = "STATUS: Your turn!"
                     self.lbl_status.config(foreground="black")
-
         sck.close()
 
     def run(self):
