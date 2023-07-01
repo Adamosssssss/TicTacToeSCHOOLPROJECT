@@ -119,7 +119,7 @@ class TicTacToeClient():
                 #Encrypted
                 #enc_message = RSA.encrypt(self.server_public_key, message)
                 #print(enc_message)
-                #self.client.send(json.dumps(enc_message).encode('utf-8'))
+                #self.client.send(json.dumps(str(enc_message)).encode('utf-8'))
 
                 #NonEncrypted
                 self.client.send(message.encode())
