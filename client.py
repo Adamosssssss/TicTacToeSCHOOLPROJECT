@@ -32,7 +32,7 @@ class TicTacToeClient():
 
         # network client
         self.client = None
-        self.host_IP = '127.0.0.1'
+        self.host_IP = 'localhost'
         self.port = 5000
         self.list_labels = []
         self.num_cols = 3
@@ -178,18 +178,19 @@ class TicTacToeClient():
         try:
             self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.client.connect((self.host_IP, self.port))
-            #Encrypted
-            #enc_name = RSA.encrypt(self.server_public_key, self.ent_name.get())
-            #self.client.send(json.dumps(enc_name).encode('utf-8'))  # Send name to server after connecting
-
-            #NonEncrypted
-            self.client.send(name.encode())
-
-            # start a thread to keep receiving message from server
 
             server_publick_key_str = self.client.recv(1024).decode()
             self.server_public_key = eval(server_publick_key_str)
             print(self.server_public_key)
+
+            #Encrypted
+            print(name)
+            enc_name = RSA.encrypt(self.server_public_key, self.ent_name.get())
+            print(enc_name)
+            self.client.send(json.dumps(enc_name).encode('utf-8')) 
+
+            # Send name to server after connecting
+            # start a thread to keep receiving message from server
 
             threading._start_new_thread(self.receive_message_from_server, (self.client, "m"))
             self.top_welcome_frame.pack_forget()
@@ -202,7 +203,7 @@ class TicTacToeClient():
     
     def receive_message_from_server(self, sck, m):
         while True:
-            from_server = sck.recv(4096).decode()
+            from_server = sck.recv(1024).decode()
             self.client.send(str(self.public_key).encode())
 
             if not from_server: break
