@@ -117,9 +117,7 @@ class TicTacToeClient():
                 print(message)
 
                 #Encrypted
-                #enc_message = RSA.encrypt(self.server_public_key, message)
-                #print(enc_message)
-                #self.client.send(json.dumps(str(enc_message)).encode('utf-8'))
+                #self.send_encrypted(message)
 
                 #NonEncrypted
                 self.client.send(message.encode())
@@ -173,6 +171,13 @@ class TicTacToeClient():
             self.your_details["name"] = self.ent_name.get()
             self.connect_to_server(self.ent_name.get())
 
+    def send_encrypted(self, message):
+        enc_message = RSA.encrypt(self.server_public_key, message)
+        print(enc_message)
+        self.client.send(json.dumps(enc_message).encode('utf-8'))
+    
+    def recv_encrypted(self):
+        return RSA.decrypt(self.private_key, json.loads(self.client.recv(1024).decode()))
 
     def connect_to_server(self, name):
         try:
@@ -185,10 +190,7 @@ class TicTacToeClient():
 
             #Encrypted
             print(name)
-            enc_name = RSA.encrypt(self.server_public_key, self.ent_name.get())
-            print(enc_name)
-            self.client.send(json.dumps(enc_name).encode('utf-8')) 
-
+            self.send_encrypted(name)
             # Send name to server after connecting
             # start a thread to keep receiving message from server
 
@@ -244,37 +246,41 @@ class TicTacToeClient():
                     self.you_started = False
                     self.your_turn = False
 
-            elif from_server.startswith("$xy$"):
-                temp = from_server.replace("$xy$", "")
-                _x = temp[0:temp.find("$")]
-                _y = temp[temp.find("$") + 1:len(temp)]
+            else:
+                #Encrypted
+                #from_server = self.recv_encrypted(from_server)
+                
+                if from_server.startswith("$xy$"):
+                    temp = from_server.replace("$xy$", "")
+                    _x = temp[0:temp.find("$")]
+                    _y = temp[temp.find("$") + 1:len(temp)]
 
-                # update board
-                label_index = int(_x) * self.num_cols + int(_y)
-                label = self.list_labels[label_index]
-                label["symbol"] = self.opponent_details["symbol"]
-                label["label"]["text"] = self.opponent_details["symbol"]
-                label["label"].config(foreground=self.opponent_details["color"])
-                label["ticked"] = True
+                    # update board
+                    label_index = int(_x) * self.num_cols + int(_y)
+                    label = self.list_labels[label_index]
+                    label["symbol"] = self.opponent_details["symbol"]
+                    label["label"]["text"] = self.opponent_details["symbol"]
+                    label["label"].config(foreground=self.opponent_details["color"])
+                    label["ticked"] = True
 
-                # Does this cordinate leads to a win or a draw
-                result = self.game_logic()
-                if result[0] is True and result[1] != "":  # opponent win
-                    self.opponent_details["score"] = self.opponent_details["score"] + 1
-                    if result[1] == self.opponent_details["symbol"]:  #
-                        self.lbl_status["text"] = "Game over, You Lost! You(" + str(self.your_details["score"]) + ") - " \
+                    # Does this cordinate leads to a win or a draw
+                    result = self.game_logic()
+                    if result[0] is True and result[1] != "":  # opponent win
+                        self.opponent_details["score"] = self.opponent_details["score"] + 1
+                        if result[1] == self.opponent_details["symbol"]:  #
+                            self.lbl_status["text"] = "Game over, You Lost! You(" + str(self.your_details["score"]) + ") - " \
+                                "" + self.opponent_details["name"] + "(" + str(self.opponent_details["score"]) + ")"
+                            self.lbl_status.config(foreground="red")
+                            threading._start_new_thread(self.gameStart, ())
+                    elif result[0] is True and result[1] == "":  # a draw
+                        self.lbl_status["text"] = "Game over, Draw! You(" + str(self.your_details["score"]) + ") - " \
                             "" + self.opponent_details["name"] + "(" + str(self.opponent_details["score"]) + ")"
-                        self.lbl_status.config(foreground="red")
+                        self.lbl_status.config(foreground="blue")
                         threading._start_new_thread(self.gameStart, ())
-                elif result[0] is True and result[1] == "":  # a draw
-                    self.lbl_status["text"] = "Game over, Draw! You(" + str(self.your_details["score"]) + ") - " \
-                        "" + self.opponent_details["name"] + "(" + str(self.opponent_details["score"]) + ")"
-                    self.lbl_status.config(foreground="blue")
-                    threading._start_new_thread(self.gameStart, ())
-                else:
-                    self.your_turn = True
-                    self.lbl_status["text"] = "STATUS: Your turn!"
-                    self.lbl_status.config(foreground="black")
+                    else:
+                        self.your_turn = True
+                        self.lbl_status["text"] = "STATUS: Your turn!"
+                        self.lbl_status.config(foreground="black")
         sck.close()
 
     def run(self):
