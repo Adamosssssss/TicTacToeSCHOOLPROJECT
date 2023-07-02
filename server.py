@@ -71,7 +71,17 @@ class TicTacToeServer:
 
                 # use a thread so as not to clog the gui thread
                 threading.Thread(target=self.send_receive_client_message, args=(client, addr)).start()
-            
+
+    def recieve_encrypted(self, client_connection):
+        print(client_connection.recv(1024))
+        return RSA.decrypt(self.PRIVATE_KEY, json.loads(client_connection.recv(1024).decode()))
+    
+    def send_encrypted(self, message,  client_public_key, client):
+        enc_message = RSA.encrypt(client_public_key, message)
+        print(enc_message)
+        self.clients[client].send(json.dumps(enc_message).encode('utf-8'))
+        
+
     def send_receive_client_message(self, client_connection, client_ip_addr):
         client_msg = " "
         client_connection.send(str(self.PUBLIC_KEY).encode())
@@ -114,8 +124,10 @@ class TicTacToeServer:
             data = client_connection.recv(1024).decode()
 
             #Encrypted
-            #data = RSA.decrypt(self.PRIVATE_KEY, json.loads(client_connection.recv(1024).decode()))
+            #data = self.recieve_encrypted(client_connection)
+            #data = RSA.decrypt(self.PRIVATE_KEY, json.loads(client_connection.recv(1024)).decode())
             print(data)
+
             if not data:
                 break
 
@@ -124,16 +136,16 @@ class TicTacToeServer:
                 # is the message from client1 or client2?
                 if client_connection == self.clients[0]:
                     #Encrypted
-                    # send the data from this player (client) to the other player (client)
-                    #enc_data = RSA.encrypt(self.public_keys[1], data)
+                        # send the data from this player (client) to the other player (client)
+                    #self.send_encrypted(self.public_keys[1], data, 1)
                     #self.clients[1].send(json.dumps(enc_data).encode('utf-8'))
                     
                     #NonEncrypted
                     self.clients[1].send(data.encode())
                 else:
                     #Encrypted
-                    # send the data from this player (client) to the other player (client)
-                    #enc_data = RSA.encrypt(self.public_keys[0], data)
+                        # send the data from this player (client) to the other player (client)
+                    #self.send_encrypted(self.public_keys[0], data, 0)
                     #self.clients[0].send(json.dumps(enc_data).encode('utf-8'))
 
                     #NonEncrypted
